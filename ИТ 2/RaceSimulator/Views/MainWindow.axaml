@@ -1,0 +1,32 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:RaceSimulator.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+        x:Class="RaceSimulator.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Race Simulator Terminal">
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto,*">
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10" Margin="10">
+            <Button Content="Start Race" Command="{Binding StartRace}"/>
+            <Button Content="Stop Race" Command="{Binding StopRace}"/>
+            <Button Content="Add Car" Command="{Binding AddRandomCar}"/>
+            <TextBlock Text="{Binding StatusMessage}" VerticalAlignment="Center" Margin="10,0"/>
+        </StackPanel>
+
+        <!-- Исправленный TextBox с правильными свойствами для скроллбаров -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+            <TextBox Text="{Binding ConsoleOutput}" 
+                   IsReadOnly="True"
+                   FontFamily="Courier New"
+                   TextWrapping="Wrap"
+                   AcceptsReturn="True"/>
+        </ScrollViewer>
+    </Grid>
+</Window>

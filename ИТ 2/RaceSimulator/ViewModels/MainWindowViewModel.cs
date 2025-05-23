@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using RaceSimulator.Models;
+using Avalonia.Threading;
 
 namespace RaceSimulator.ViewModels
 {
@@ -27,6 +29,11 @@ namespace RaceSimulator.ViewModels
         public ICommand AddLoaderCommand { get; }
         public ICommand StartRaceCommand { get; }
         public ICommand StopRaceCommand { get; }
+        
+        public ICommand ResetRaceCommand { get; }
+        
+        public ObservableCollection<Mechanic> Mechanics { get; } = new();
+        public ObservableCollection<Loader> Loaders { get; } = new();
 
         public MainWindowViewModel()
         {
@@ -35,6 +42,7 @@ namespace RaceSimulator.ViewModels
             AddLoaderCommand = new RelayCommand(AddLoader);
             StartRaceCommand = new RelayCommand(async () => await StartRaceAsync());
             StopRaceCommand = new RelayCommand(StopRace);
+            ResetRaceCommand = new RelayCommand(ResetRace);
         }
 
         private int _carCounter = 1;
@@ -44,7 +52,11 @@ namespace RaceSimulator.ViewModels
         private void AddCar()
         {
             string carName = $"Car {_carCounter++}";
-            var car = new RacingCar(carName);
+            var car = new RacingCar(carName)
+            {
+                VerticalOffset = Cars.Count * 40
+            };
+
             
             car.TiresWornOut += (_, _) => AddLog($"{car.Name}: шины изношены!");
             car.Collided += (_, _) => AddLog($"{car.Name}: столкновение!");
@@ -66,30 +78,116 @@ namespace RaceSimulator.ViewModels
         {
             var name = $"Mechanic {_mechCounter++}";
             var mech = new Mechanic(name);
+
             _raceTrack.Mechanics.Add(mech);
+            Mechanics.Add(mech);
+            
             foreach (var car in _raceTrack.Cars)
                 mech.Subscribe(car);
+
+            mech.LogRequested += message =>
+            {
+                Dispatcher.UIThread.Post(() => AddLog(message));
+            };
+
+            mech.RepairFailed += async car =>
+            {
+                await Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    var loader = Loaders.FirstOrDefault();
+                    if (loader != null)
+                    {
+                        var visual = new LoaderVisual(loader.Name)
+                        {
+                            X = 0,
+                            Y = car.VerticalOffset
+                        };
+
+                        LoaderVisuals.Add(visual);
+                        await visual.MoveToAsync(car);
+
+                        Cars.Remove(car);
+                        LoaderVisuals.Remove(visual);
+                        AddLog($"🚜 {loader.Name} увёз {car.Name} с трассы");
+                    }
+                    else
+                    {
+                        AddLog($"⚠️ Нет доступных погрузчиков для эвакуации {car.Name}");
+                    }
+                });
+            };
+
             AddLog($"Добавлен механик: {name}");
         }
+
 
         private void AddLoader()
         {
             var name = $"Loader {_loaderCounter++}";
             var loader = new Loader(name);
+
+            loader.CarRemoved += async car =>
+            {
+                await Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    var visual = new LoaderVisual(loader.Name)
+                    {
+                        X = 0,
+                        Y = car.VerticalOffset
+                    };
+
+                    LoaderVisuals.Add(visual);
+                    
+                    await visual.MoveToAsync(car);
+
+                    await Task.Delay(1000);
+
+                    Cars.Remove(car);
+                    LoaderVisuals.Remove(visual);
+
+                    AddLog($"🚜 {loader.Name} увёз {car.Name} с трассы.");
+                });
+            };
+
+
             _raceTrack.Loaders.Add(loader);
+            Loaders.Add(loader);
+
             foreach (var car in _raceTrack.Cars)
                 loader.Subscribe(car);
+
             AddLog($"Добавлен погрузчик: {name}");
         }
-
+        
         private async Task StartRaceAsync()
         {
             if (IsRacing) return;
             IsRacing = true;
             AddLog("🏁 Гонка началась!");
-            await _raceTrack.StartRaceAsync();
+
+            var raceTasks = Cars.Select(async car =>
+            {
+                await car.StartRaceAsync();
+                if (car.HasFinished)
+                {
+                    Dispatcher.UIThread.Post(() =>
+                        AddLog($"🏁 {car.Name} пересёк финишную черту!"));
+                }
+            });
+
+            await Task.WhenAll(raceTasks);
+
             IsRacing = false;
-            AddLog("🏁 Гонка завершена!");
+
+            var winner = Cars
+                .Where(c => c.HasFinished && c.FinishTime.HasValue)
+                .OrderBy(c => c.FinishTime)
+                .FirstOrDefault();
+
+            if (winner != null)
+                AddLog($"🥇 Победитель: {winner.Name}!");
+
+            AddLog("🏁 Все участники завершили гонку.");
         }
 
         private void StopRace()
@@ -104,6 +202,16 @@ namespace RaceSimulator.ViewModels
         {
             Logs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] {message}");
         }
+        
+        private void ResetRace()
+        {
+            _raceTrack.StopRace();
+            Cars.Clear();
+            _raceTrack.Cars.Clear();
+            AddLog("🔄 Гонка сброшена.");
+        }
+        
+        public ObservableCollection<LoaderVisual> LoaderVisuals { get; } = new();
 
         public event PropertyChangedEventHandler? PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string? name = null) =>

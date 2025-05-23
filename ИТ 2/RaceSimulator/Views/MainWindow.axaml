@@ -1,78 +1,132 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:RaceSimulator.ViewModels"
+        xmlns:models="clr-namespace:RaceSimulator.Models"
         x:Class="RaceSimulator.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Title="Гоночный симулятор" Width="900" Height="600">
+        Title="Гоночный симулятор" Width="1200" Height="1000">
 
     <Window.DataContext>
         <vm:MainWindowViewModel />
     </Window.DataContext>
 
-    <StackPanel Margin="10" Spacing="10">
-        
-        <!-- Кнопки управления -->
-        <StackPanel Orientation="Horizontal" Spacing="8">
+    <DockPanel LastChildFill="True" Margin="10">
+
+        <!-- Кнопки -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0 0 0 10">
             <Button Content="Добавить машину" Command="{Binding AddCarCommand}" />
             <Button Content="Добавить механика" Command="{Binding AddMechanicCommand}" />
             <Button Content="Добавить погрузчик" Command="{Binding AddLoaderCommand}" />
             <Button Content="Старт" Command="{Binding StartRaceCommand}" />
             <Button Content="Стоп" Command="{Binding StopRaceCommand}" />
+            <Button Content="Сброс" Command="{Binding ResetRaceCommand}" />
         </StackPanel>
 
-        <!-- Трасса (движущиеся машины) -->
-        <Border BorderBrush="Gray" BorderThickness="1" Padding="5">
-            <StackPanel>
-                <TextBlock Text="Трасса" FontWeight="Bold" Margin="0,0,0,5"/>
-                <ScrollViewer HorizontalScrollBarVisibility="Auto">
-                    <Canvas Height="100" Background="LightGray">
+        <!-- Основная часть (заполняет весь экран) -->
+        <Grid RowDefinitions="Auto,*,Auto" ColumnDefinitions="2*,*" Margin="0">
+
+            <!-- трасса -->
+            <Border Grid.Row="0" Grid.ColumnSpan="2" BorderBrush="Gray" BorderThickness="1" Padding="5" MinHeight="150">
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" Height="300" Background="#222">
+                    <Grid Width="2000" Height="300">
+
+                        <!-- Машины -->
                         <ItemsControl ItemsSource="{Binding Cars}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <Canvas />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Ellipse Width="20" Height="20">
-                                        <Ellipse.Fill>
-                                            <SolidColorBrush Color="Red"/>
-                                        </Ellipse.Fill>
-                                        <Canvas.Left>
-                                            <Binding Path="CanvasX"/>
-                                        </Canvas.Left>
-                                        <Canvas.Top>40</Canvas.Top>
-                                    </Ellipse>
+                                <DataTemplate x:DataType="models:RacingCar">
+                                    <ContentControl>
+                                        <ContentControl.RenderTransform>
+                                            <TranslateTransform
+                                                X="{Binding CanvasX}"
+                                                Y="{Binding VerticalOffset}" />
+                                        </ContentControl.RenderTransform>
+                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                            <TextBlock Text="{Binding IsRepairing, Converter={StaticResource BoolToIconConverter}}" FontSize="18"/>
+                                            <TextBlock Text="{Binding Name}" FontSize="14" Foreground="White"/>
+                                        </StackPanel>
+                                    </ContentControl>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                    </Canvas>
-                </ScrollViewer>
-            </StackPanel>
-        </Border>
 
-        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto">
-            <!-- Список машин -->
-            <Border BorderBrush="Gray" BorderThickness="1" Padding="5" Margin="0,10,10,0">
-                <StackPanel>
-                    <TextBlock Text="Машины" FontWeight="Bold" Margin="0,0,0,5"/>
-                    <ListBox ItemsSource="{Binding Cars}">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal" Spacing="10">
-                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" />
-                                    <TextBlock Text="Позиция:" />
-                                    <TextBlock Text="{Binding Position, StringFormat='0.0'}" />
+                        <!-- Погрузчики -->
+                        <ItemsControl ItemsSource="{Binding LoaderVisuals}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <Canvas />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="models:LoaderVisual">
+                                    <ContentControl>
+                                        <ContentControl.RenderTransform>
+                                            <TranslateTransform
+                                                X="{Binding X}"
+                                                Y="{Binding Y}" />
+                                        </ContentControl.RenderTransform>
+                                        <TextBlock Text="🚜" FontSize="20" />
+                                    </ContentControl>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                    </Grid>
+                </ScrollViewer>
+
+            </Border>
+
+            <!-- машины -->
+            <Border Grid.Row="1" Grid.Column="0" BorderBrush="Gray" BorderThickness="1" Padding="5">
+                <ListBox ItemsSource="{Binding Cars}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="models:RacingCar">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <TextBlock Text="🚗" />
+                                <TextBlock Text="{Binding Name}" FontWeight="Bold" />
+                                <TextBlock Text="Позиция:" />
+                                <TextBlock Text="{Binding Position, StringFormat='0.0'}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+
+            <!-- журнал -->
+            <Border Grid.Row="1" Grid.Column="1" BorderBrush="Gray" BorderThickness="1" Padding="5">
+                <ListBox ItemsSource="{Binding Logs}" />
+            </Border>
+
+            <!-- механики и погрузчики -->
+            <Border Grid.Row="2" Grid.ColumnSpan="2" BorderBrush="Gray" BorderThickness="1" Padding="5">
+                <StackPanel Orientation="Horizontal" Spacing="20">
+                    <ItemsControl ItemsSource="{Binding Mechanics}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="models:Mechanic">
+                                <StackPanel Orientation="Vertical">
+                                    <TextBlock Text="🔧" FontSize="20" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding Name}" FontSize="12" HorizontalAlignment="Center" />
                                 </StackPanel>
                             </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <ItemsControl ItemsSource="{Binding Loaders}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="models:Loader">
+                                <StackPanel Orientation="Vertical">
+                                    <TextBlock Text="🚜" FontSize="20" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding Name}" FontSize="12" HorizontalAlignment="Center" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
             </Border>
 
-            <!-- Журнал событий -->
-            <Border BorderBrush="Gray" BorderThickness="1" Padding="5" Grid.Column="1" Margin="0,10,0,0">
-                <StackPanel>
-                    <TextBlock Text="Журнал событий" FontWeight="Bold" Margin="0,0,0,5"/>
-                    <ListBox ItemsSource="{Binding Logs}" Height="200"/>
-                </StackPanel>
-            </Border>
         </Grid>
-
-    </StackPanel>
+    </DockPanel>
 </Window>

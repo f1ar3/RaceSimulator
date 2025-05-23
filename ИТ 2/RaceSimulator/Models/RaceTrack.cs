@@ -12,33 +12,23 @@ namespace RaceSimulator.Models
         public List<Mechanic> Mechanics { get; } = new();
         public List<ILoader> Loaders { get; } = new();
 
-        public void AddCar(string name)
-        {
-            var car = new RacingCar(name);
-            
-            foreach (var mechanic in Mechanics)
-                mechanic.Subscribe(car);
-
-            foreach (var loader in Loaders.OfType<Loader>())
-                loader.Subscribe(car);
-
-            Cars.Add(car);
-        }
-
-        public void AddMechanic(string name)
-        {
-            Mechanics.Add(new Mechanic(name));
-        }
-
-        public void AddLoader(string name)
-        {
-            Loaders.Add(new Loader(name));
-        }
-
         public async Task StartRaceAsync()
         {
-            var tasks = Cars.Select(car => car.StartRaceAsync()).ToList();
-            await Task.WhenAll(tasks);
+            var tasks = Cars.Select(car => Task.Run(() => car.StartRaceAsync())).ToList();
+
+            while (true)
+            {
+                await Task.Delay(200);
+
+                if (Cars.Any(c => c.HasFinished))
+                {
+                    StopRace();
+                    break;
+                }
+
+                if (tasks.All(t => t.IsCompleted))
+                    break;
+            }
         }
 
         public void StopRace()
@@ -47,13 +37,11 @@ namespace RaceSimulator.Models
                 car.StopRace();
         }
 
-        // Рефлексия: создаёт объект по имени класса (например, "RacingCar")
         public object? CreateModelByName(string className, params object[] args)
         {
             var assembly = Assembly.GetExecutingAssembly();
             var type = assembly.GetTypes().FirstOrDefault(t => t.Name == className);
-            if (type == null) return null;
-            return Activator.CreateInstance(type, args);
+            return type == null ? null : Activator.CreateInstance(type, args);
         }
     }
 }

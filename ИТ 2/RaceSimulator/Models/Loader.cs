@@ -6,6 +6,9 @@ namespace RaceSimulator.Models
     {
         public string Name { get; }
 
+        // Событие, чтобы ViewModel могла подписаться
+        public event Action<RacingCar>? CarRemoved;
+
         public Loader(string name)
         {
             Name = name;
@@ -13,21 +16,21 @@ namespace RaceSimulator.Models
 
         public void Subscribe(RacingCar car)
         {
-            car.Collided += OnCarCrashed;
-        }
-
-        private void OnCarCrashed(object? sender, EventArgs e)
-        {
-            if (sender is RacingCar car)
+            car.PropertyChanged += (_, e) =>
             {
-                Console.WriteLine($"[Погрузчик {Name}] Эвакуирует {car.Name} после аварии...");
-                Load(car);
-            }
+                if (e.PropertyName == nameof(car.IsRemoved) && car.IsRemoved)
+                {
+                    Load(car);
+                }
+            };
         }
 
         public void Load(RacingCar car)
         {
-            car.FixDamage();
+            car.StopRace();
+
+            // Уведомляем через событие
+            CarRemoved?.Invoke(car);
         }
     }
 }

@@ -1,87 +1,86 @@
 using System;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
 namespace RaceSimulator.Models
 {
-    public class RacingCar
+    public class RacingCar : INotifyPropertyChanged
     {
-        public event Action<RacingCar>? NeedPitStop;
-        public event Action<RacingCar>? Crashed;
-        public event Action<string>? OnEventLogged;
-
-        private readonly Random _random = new Random();
+        private static readonly Random _random = new();
         private bool _isRacing;
-        private double _tireWear;
-        private bool _isInPit;
-        private bool _isCrashed;
+        private double _position;
 
         public string Name { get; }
-        public double TireWear
-        {
-            get => _tireWear;
-            set => _tireWear = Math.Round(value, 2);
-        }
+        public bool IsBroken { get; private set; }
+        public bool NeedsTireChange { get; private set; }
 
-        public RacingCar(string name, double startX, double startY)
-        {
-            Name = name;
-        }
+        public event EventHandler? TiresWornOut;
+        public event EventHandler? Collided;
 
-        public void StartRace()
+        public double Position
         {
-            _isRacing = true;
-            LogEvent("Гонка начата");
-            Task.Run(() => RaceLoop());
-        }
-
-        public void StopRace()
-        {
-            _isRacing = false;
-            LogEvent("Гонка остановлена");
-        }
-
-        private async void RaceLoop()
-        {
-            while (_isRacing)
+            get => _position;
+            private set
             {
-                if (_isCrashed || _isInPit)
+                if (Math.Abs(_position - value) > 0.01)
                 {
-                    await Task.Delay(100);
-                    continue;
+                    _position = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(CanvasX));
                 }
-
-                TireWear += _random.NextDouble() * 0.1;
-                if (TireWear > 1 && !_isInPit)
-                {
-                    LogEvent($"Покрышки изношены (уровень: {TireWear:F2}), требуется пит-стоп");
-                    NeedPitStop?.Invoke(this);
-                }
-
-                if (_random.NextDouble() < 0.01)
-                {
-                    LogEvent("АВАРИЯ!");
-                    _isCrashed = true;
-                    Crashed?.Invoke(this);
-                }
-
-                await Task.Delay(100);
             }
         }
 
-        public void EnterPit()
+        public double CanvasX => Position * 5;
+
+        public RacingCar(string name)
         {
-            _isInPit = true;
-            LogEvent("Заехал на пит-стоп");
+            Name = name;
+            Position = 0;
         }
 
-        public void ExitPit()
+        public async Task StartRaceAsync()
         {
-            _isInPit = false;
-            _isCrashed = false;
-            TireWear = 0;
-            LogEvent("Покинул пит-стоп");
+            _isRacing = true;
+
+            while (_isRacing && !IsBroken)
+            {
+                await Task.Delay(500);
+
+                Position += _random.NextDouble() * 5;
+
+                if (!NeedsTireChange && _random.NextDouble() < 0.05)
+                {
+                    NeedsTireChange = true;
+                    TiresWornOut?.Invoke(this, EventArgs.Empty);
+                }
+
+                if (_random.NextDouble() < 0.02)
+                {
+                    IsBroken = true;
+                    Collided?.Invoke(this, EventArgs.Empty);
+                }
+            }
         }
 
-        private void LogEvent(string message) => OnEventLogged?.Invoke($"[{Name}] {message}");
+        public void StopRace() => _isRacing = false;
+
+        public void FixDamage()
+        {
+            IsBroken = false;
+        }
+
+        public void ChangeTires()
+        {
+            NeedsTireChange = false;
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        private void OnPropertyChanged([CallerMemberName] string? name = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        }
     }
 }

@@ -1,104 +1,112 @@
 ﻿using System;
 using System.Collections.ObjectModel;
-using System.Text;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
+using System.Windows.Input;
 using RaceSimulator.Models;
-using ReactiveUI;
 
 namespace RaceSimulator.ViewModels
 {
-    public class MainWindowViewModel : ViewModelBase
+    public class MainWindowViewModel : INotifyPropertyChanged
     {
-        private readonly RaceTrack _raceTrack;
-        private bool _isRaceRunning;
-        private string _statusMessage = "Готов к старту";
-        private readonly StringBuilder _consoleOutputBuilder = new StringBuilder();
+        private readonly RaceTrack _raceTrack = new();
 
-        public ObservableCollection<RacingCar> Cars { get; } = new ObservableCollection<RacingCar>();
-        private string _consoleOutput = string.Empty;
- public string ConsoleOutput
+        public ObservableCollection<string> Logs { get; } = new();
+        public ObservableCollection<RacingCar> Cars { get; } = new();
+
+        private bool _isRacing;
+        public bool IsRacing
         {
-            get => _consoleOutput;
-            private set => this.RaiseAndSetIfChanged(ref _consoleOutput, value);
-        }
-        public string StatusMessage
-        {
-            get => _statusMessage;
-            set => this.RaiseAndSetIfChanged(ref _statusMessage, value);
+            get => _isRacing;
+            set { _isRacing = value; OnPropertyChanged(); }
         }
 
-        public bool IsRaceRunning
-        {
-            get => _isRaceRunning;
-            set => this.RaiseAndSetIfChanged(ref _isRaceRunning, value);
-        }
+        public ICommand AddCarCommand { get; }
+        public ICommand AddMechanicCommand { get; }
+        public ICommand AddLoaderCommand { get; }
+        public ICommand StartRaceCommand { get; }
+        public ICommand StopRaceCommand { get; }
 
         public MainWindowViewModel()
         {
-            _raceTrack = new RaceTrack(3, new Loader());
-            _raceTrack.OnEventLogged += LogEvent;
-
-            InitializeCars();
+            AddCarCommand = new RelayCommand(AddCar);
+            AddMechanicCommand = new RelayCommand(AddMechanic);
+            AddLoaderCommand = new RelayCommand(AddLoader);
+            StartRaceCommand = new RelayCommand(async () => await StartRaceAsync());
+            StopRaceCommand = new RelayCommand(StopRace);
         }
 
-        private void InitializeCars()
-        {
-            var cars = new[]
-            {
-                new RacingCar("Red Bull", 0, 0),
-                new RacingCar("Ferrari", 0, 0),
-                new RacingCar("Mercedes", 0, 0),
-                new RacingCar("McLaren", 0, 0)
-            };
+        private int _carCounter = 1;
+        private int _mechCounter = 1;
+        private int _loaderCounter = 1;
 
-            foreach (var car in cars)
+        private void AddCar()
+        {
+            string carName = $"Car {_carCounter++}";
+            var car = new RacingCar(carName);
+            
+            car.TiresWornOut += (_, _) => AddLog($"{car.Name}: шины изношены!");
+            car.Collided += (_, _) => AddLog($"{car.Name}: столкновение!");
+
+            _raceTrack.Cars.Add(car);
+            foreach (var mechanic in _raceTrack.Mechanics)
+                mechanic.Subscribe(car);
+            foreach (var loader in _raceTrack.Loaders)
             {
-                car.OnEventLogged += LogEvent;
-                _raceTrack.AddCar(car);
-                Cars.Add(car);
+                if (loader is Loader concreteLoader)
+                    concreteLoader.Subscribe(car);
             }
-        }
 
-        private void LogEvent(string message)
-        {
-            _consoleOutputBuilder.AppendLine($"[{DateTime.Now:HH:mm:ss.fff}] {message}");
-            ConsoleOutput = _consoleOutputBuilder.ToString();
-        }
-
-        public void StartRace()
-        {
-            if (IsRaceRunning) return;
-
-            IsRaceRunning = true;
-            StatusMessage = "Гонка началась!";
-            foreach (var car in Cars)
-            {
-                car.StartRace();
-            }
-        }
-
-        public void StopRace()
-        {
-            if (!IsRaceRunning) return;
-
-            IsRaceRunning = false;
-            StatusMessage = "Гонка остановлена";
-            foreach (var car in Cars)
-            {
-                car.StopRace();
-            }
-        }
-
-        public void AddRandomCar()
-        {
-            var random = new Random();
-            var carNames = new[] { "Williams", "Alpine", "Aston Martin", "AlphaTauri", "Alfa Romeo", "Haas" };
-            var name = carNames[random.Next(carNames.Length)];
-
-            var car = new RacingCar(name, 0, 0);
-            car.OnEventLogged += LogEvent;
-            _raceTrack.AddCar(car);
             Cars.Add(car);
-            StatusMessage = $"Добавлен новый болид: {name}";
+            AddLog($"Добавлена машина: {car.Name}");
         }
+
+        private void AddMechanic()
+        {
+            var name = $"Mechanic {_mechCounter++}";
+            var mech = new Mechanic(name);
+            _raceTrack.Mechanics.Add(mech);
+            foreach (var car in _raceTrack.Cars)
+                mech.Subscribe(car);
+            AddLog($"Добавлен механик: {name}");
+        }
+
+        private void AddLoader()
+        {
+            var name = $"Loader {_loaderCounter++}";
+            var loader = new Loader(name);
+            _raceTrack.Loaders.Add(loader);
+            foreach (var car in _raceTrack.Cars)
+                loader.Subscribe(car);
+            AddLog($"Добавлен погрузчик: {name}");
+        }
+
+        private async Task StartRaceAsync()
+        {
+            if (IsRacing) return;
+            IsRacing = true;
+            AddLog("🏁 Гонка началась!");
+            await _raceTrack.StartRaceAsync();
+            IsRacing = false;
+            AddLog("🏁 Гонка завершена!");
+        }
+
+        private void StopRace()
+        {
+            if (!IsRacing) return;
+            _raceTrack.StopRace();
+            IsRacing = false;
+            AddLog("⛔ Гонка остановлена вручную.");
+        }
+
+        private void AddLog(string message)
+        {
+            Logs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] {message}");
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        private void OnPropertyChanged([CallerMemberName] string? name = null) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

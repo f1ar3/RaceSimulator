@@ -1,11 +1,9 @@
-using System.Threading.Tasks;
-
 namespace RaceSimulator.Models
 {
-public interface ILoader
+    public interface ILoader
     {
-        bool IsBusy { get; }
-        Task MoveToAccident();
-        Task PerformAction();
+        string Name { get; }
+
+        void Load(RacingCar car);
     }
 }

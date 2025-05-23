@@ -1,29 +1,33 @@
 using System;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace RaceSimulator.Models
 {
-     public class Loader : ILoader
+    public class Loader : ILoader
     {
-        private readonly Random _random = new Random();
-        
-        public bool IsBusy { get; private set; }
+        public string Name { get; }
 
-        public async Task MoveToAccident()
+        public Loader(string name)
         {
-            IsBusy = true;
-            await Task.Delay(1000); // Имитация движения
-            IsBusy = false;
+            Name = name;
         }
 
-        public async Task PerformAction()
+        public void Subscribe(RacingCar car)
         {
-            IsBusy = true;
-            await Task.Delay(_random.Next(1000, 3000)); // Имитация уборки
-            IsBusy = false;
+            car.Collided += OnCarCrashed;
+        }
+
+        private void OnCarCrashed(object? sender, EventArgs e)
+        {
+            if (sender is RacingCar car)
+            {
+                Console.WriteLine($"[Погрузчик {Name}] Эвакуирует {car.Name} после аварии...");
+                Load(car);
+            }
+        }
+
+        public void Load(RacingCar car)
+        {
+            car.FixDamage();
         }
     }
 }

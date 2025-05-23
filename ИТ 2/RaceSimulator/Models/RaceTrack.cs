@@ -1,69 +1,59 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace RaceSimulator.Models
 {
     public class RaceTrack
     {
-        public event Action<string>? OnEventLogged;
+        public List<RacingCar> Cars { get; } = new();
+        public List<Mechanic> Mechanics { get; } = new();
+        public List<ILoader> Loaders { get; } = new();
 
-        private readonly List<RacingCar> _cars = new List<RacingCar>();
-        private readonly List<Mechanic> _mechanics;
-        private readonly ILoader _loader;
-
-        public RaceTrack(int mechanicCount, ILoader loader)
+        public void AddCar(string name)
         {
-            _mechanics = Enumerable.Range(0, mechanicCount)
-                .Select(_ => new Mechanic())
-                .ToList();
-            _loader = loader;
+            var car = new RacingCar(name);
+            
+            foreach (var mechanic in Mechanics)
+                mechanic.Subscribe(car);
+
+            foreach (var loader in Loaders.OfType<Loader>())
+                loader.Subscribe(car);
+
+            Cars.Add(car);
         }
 
-        public void AddCar(RacingCar car)
+        public void AddMechanic(string name)
         {
-            car.NeedPitStop += OnNeedPitStop;
-            car.Crashed += OnCarCrashed;
-            _cars.Add(car);
+            Mechanics.Add(new Mechanic(name));
         }
 
-        private async void OnNeedPitStop(RacingCar car)
+        public void AddLoader(string name)
         {
-            LogEvent($"{car.Name} требует пит-стоп");
-            car.EnterPit();
-
-            var availableMechanic = _mechanics.FirstOrDefault(m => !m.IsBusy);
-            if (availableMechanic != null)
-            {
-                LogEvent($"Назначен механик для {car.Name}");
-                await availableMechanic.ChangeTires(car);
-                car.ExitPit();
-            }
-            else
-            {
-                LogEvent($"Нет свободных механиков для {car.Name}");
-            }
+            Loaders.Add(new Loader(name));
         }
 
-        private async void OnCarCrashed(RacingCar car)
+        public async Task StartRaceAsync()
         {
-            LogEvent($"Обработка аварии {car.Name}");
-            if (!_loader.IsBusy)
-            {
-                await _loader.MoveToAccident();
-                _loader.PerformAction();
-
-                await Task.Delay(3000);
-                car.ExitPit();
-                LogEvent($"{car.Name} восстановлен после аварии");
-            }
-            else
-            {
-                LogEvent($"Погрузчик занят, не может помочь {car.Name}");
-            }
+            var tasks = Cars.Select(car => car.StartRaceAsync()).ToList();
+            await Task.WhenAll(tasks);
         }
 
-        private void LogEvent(string message) => OnEventLogged?.Invoke($"[Трасса] {message}");
+        public void StopRace()
+        {
+            foreach (var car in Cars)
+                car.StopRace();
+        }
+
+        // Рефлексия: создаёт объект по имени класса (например, "RacingCar")
+        public object? CreateModelByName(string className, params object[] args)
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            var type = assembly.GetTypes().FirstOrDefault(t => t.Name == className);
+            if (type == null) return null;
+            return Activator.CreateInstance(type, args);
+        }
     }
 }

@@ -1,24 +1,28 @@
 using System;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace RaceSimulator.Models
 {
     public class Mechanic
     {
-        private readonly Random _random = new Random();
-        
-        public bool IsBusy { get; private set; }
+        public string Name { get; }
 
-        public async Task ChangeTires(RacingCar car)
+        public Mechanic(string name)
         {
-            IsBusy = true;
-            await Task.Run(() =>
+            Name = name;
+        }
+
+        public void Subscribe(RacingCar car)
+        {
+            car.TiresWornOut += OnTiresWornOut;
+        }
+
+        private void OnTiresWornOut(object? sender, EventArgs e)
+        {
+            if (sender is RacingCar car)
             {
-                Thread.Sleep(_random.Next(2000, 5000));
-                car.TireWear = 0;
-                IsBusy = false;
-            });
+                Console.WriteLine($"[Механик {Name}] Заменяет шины у машины {car.Name}...");
+                car.ChangeTires();
+            }
         }
     }
 }

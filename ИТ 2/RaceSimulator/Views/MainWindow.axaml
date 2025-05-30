@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:RaceSimulator.ViewModels"
         xmlns:models="clr-namespace:RaceSimulator.Models"
+        xmlns:converters="clr-namespace:RaceSimulator.Converters"
         x:Class="RaceSimulator.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="Гоночный симулятор" Width="1200" Height="1000">
@@ -9,6 +10,11 @@
     <Window.DataContext>
         <vm:MainWindowViewModel />
     </Window.DataContext>
+    
+    <Window.Resources>
+        <!-- Добавляем конвертер в ресурсы -->
+        <converters:MarginConverter x:Key="MarginConverter"/>
+    </Window.Resources>
 
     <DockPanel LastChildFill="True" Margin="10">
 
@@ -29,6 +35,11 @@
             <Border Grid.Row="0" Grid.ColumnSpan="2" BorderBrush="Gray" BorderThickness="1" Padding="5" MinHeight="150">
                 <ScrollViewer HorizontalScrollBarVisibility="Auto" Height="300" Background="#222">
                     <Grid Width="2000" Height="300">
+                        
+                        <!-- Финишная черта -->
+                        <Rectangle Width="5" Height="300" Fill="White"
+                                   HorizontalAlignment="Left" VerticalAlignment="Stretch"
+                                   Margin="{Binding FinishLinePosition, Converter={StaticResource MarginConverter}}" />
 
                         <!-- Машины -->
                         <ItemsControl ItemsSource="{Binding Cars}">

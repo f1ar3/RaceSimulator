@@ -16,6 +16,21 @@ namespace RaceSimulator.ViewModels
 
         public ObservableCollection<string> Logs { get; } = new();
         public ObservableCollection<RacingCar> Cars { get; } = new();
+        
+        private double _finishLinePosition = 800; 
+
+        public double FinishLinePosition
+        {
+            get => _finishLinePosition;
+            set
+            {
+                if (_finishLinePosition != value)
+                {
+                    _finishLinePosition = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
 
         private bool _isRacing;
         public bool IsRacing

@@ -17,6 +17,21 @@ namespace RaceSimulator.Models
         public bool HasFinished { get; private set; }
         private const double FinishLine = 100;
         public DateTime? FinishTime { get; private set; }
+        
+        private double _speed = 5; 
+        public double Speed
+        {
+            get => _speed;
+            set
+            {
+                if (_speed != value)
+                {
+                    _speed = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
 
         public double Position
         {
@@ -44,6 +59,12 @@ namespace RaceSimulator.Models
         {
             Name = name;
             Position = 0;
+            
+            TiresWornOut += (sender, args) => 
+            {
+                Speed *= 0.8;
+                OnPropertyChanged(nameof(Speed));
+            };
         }
 
         public async Task StartRaceAsync()
@@ -53,7 +74,7 @@ namespace RaceSimulator.Models
             while (_isRacing && !IsBroken && !HasFinished)
             {
                 await Task.Delay(500);
-                Position += _random.NextDouble() * 5;
+                Position += _random.NextDouble() * Speed;
                 if (Position >= FinishLine)
                 {
                     HasFinished = true;
@@ -84,8 +105,7 @@ namespace RaceSimulator.Models
         {
             IsBroken = false;
             OnPropertyChanged(nameof(Color));
-
-            // Продолжить гонку
+            
             if (!_isRacing)
                 _ = StartRaceAsync();
         }

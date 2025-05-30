@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "aVCKEj+3LtI=",
+  "dgSpecHash": "hUZc5IlaBOs=",
   "success": true,
   "projectFilePath": "/Users/goshaapolonov/RiderProjects/race_task_3/ИТ 2/RaceSimulator/RaceSimulator.csproj",
   "expectedPackageFiles": [
@@ -40,7 +40,10 @@
     "/Users/goshaapolonov/.nuget/packages/system.reactive/6.0.1/system.reactive.6.0.1.nupkg.sha512",
     "/Users/goshaapolonov/.nuget/packages/system.text.encodings.web/9.0.2/system.text.encodings.web.9.0.2.nupkg.sha512",
     "/Users/goshaapolonov/.nuget/packages/system.text.json/9.0.2/system.text.json.9.0.2.nupkg.sha512",
-    "/Users/goshaapolonov/.nuget/packages/tmds.dbus.protocol/0.20.0/tmds.dbus.protocol.0.20.0.nupkg.sha512"
+    "/Users/goshaapolonov/.nuget/packages/tmds.dbus.protocol/0.20.0/tmds.dbus.protocol.0.20.0.nupkg.sha512",
+    "/Users/goshaapolonov/.nuget/packages/microsoft.netcore.app.ref/8.0.16/microsoft.netcore.app.ref.8.0.16.nupkg.sha512",
+    "/Users/goshaapolonov/.nuget/packages/microsoft.aspnetcore.app.ref/8.0.16/microsoft.aspnetcore.app.ref.8.0.16.nupkg.sha512",
+    "/Users/goshaapolonov/.nuget/packages/microsoft.netcore.app.host.osx-arm64/8.0.16/microsoft.netcore.app.host.osx-arm64.8.0.16.nupkg.sha512"
   ],
   "logs": []
 }

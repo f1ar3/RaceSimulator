@@ -14,7 +14,7 @@ namespace RaceSimulator.Models
         private Task? _processingTask;
 
         public event Action<string>? LogRequested;
-        public event Action<RacingCar>? RepairFailed; // вызывается, если не удалось починить
+        public event Action<RacingCar>? RepairFailed;
 
         public Mechanic(string name)
         {
@@ -29,7 +29,7 @@ namespace RaceSimulator.Models
             {
                 if (!car.IsBroken || car.IsRemoved) return;
 
-                car.StopRace(); // останавливаем сразу
+                car.StopRace();
                 _repairQueue.Enqueue(car);
                 LogRequested?.Invoke($"🔧 {Name} получил заявку на ремонт {car.Name}");
             };

@@ -5,8 +5,7 @@ namespace RaceSimulator.Models
     public class Loader : ILoader
     {
         public string Name { get; }
-
-        // Событие, чтобы ViewModel могла подписаться
+        
         public event Action<RacingCar>? CarRemoved;
 
         public Loader(string name)
@@ -28,8 +27,7 @@ namespace RaceSimulator.Models
         public void Load(RacingCar car)
         {
             car.StopRace();
-
-            // Уведомляем через событие
+            
             CarRemoved?.Invoke(car);
         }
     }
